@@ -1,5 +1,7 @@
 # Tutorial 3 - Arquitectura Hexagonal
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&repo=MISW4406/tutorial-3-arquitectura-hexagonal) 
+
 Repositorio con código base para el desarrollo de una arquitectura hexagonal siguiendo los principios y patrones de DDD.
 
 
