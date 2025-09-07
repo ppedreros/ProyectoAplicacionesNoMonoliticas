@@ -1,16 +1,16 @@
 """Initial migration
 
-Revision ID: 2d5e92f0c404
+Revision ID: 001
 Revises: 
-Create Date: 2024-03-17 12:00:00.000000
+Create Date: 2024-03-17 00:00:00.000000
 
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
+
 
 # revision identifiers, used by Alembic.
-revision = '2d5e92f0c404'
+revision = '001'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column('url_origen', sa.String(), nullable=True),
         sa.Column('url_destino', sa.String(), nullable=True),
         sa.Column('timestamp', sa.DateTime(), nullable=True),
-        sa.Column('metadata_cliente', postgresql.JSON(astext_type=sa.Text()), nullable=True),
+        sa.Column('metadata_cliente', sa.JSON(), nullable=True),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_clicks_id'), 'clicks', ['id'], unique=False)
@@ -40,7 +40,7 @@ def upgrade() -> None:
         sa.Column('id_campana', sa.String(), nullable=True),
         sa.Column('tipo', sa.String(), nullable=True),
         sa.Column('timestamp', sa.DateTime(), nullable=True),
-        sa.Column('metadata_cliente', postgresql.JSON(astext_type=sa.Text()), nullable=True),
+        sa.Column('metadata_cliente', sa.JSON(), nullable=True),
         sa.Column('valor', sa.Float(), nullable=True),
         sa.Column('moneda', sa.String(), nullable=True),
         sa.Column('comision', sa.Float(), nullable=True),
