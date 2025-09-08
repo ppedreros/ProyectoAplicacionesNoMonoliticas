@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
+from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from ..dominio.entidades import Click, Conversion
@@ -18,7 +19,10 @@ class RepositorioClicksSQL(RepositorioClicks):
             url_origen=click.url_origen,
             url_destino=click.url_destino,
             timestamp=click.timestamp,
-            metadata_cliente=click.metadata_cliente.__dict__
+            metadata_cliente=click.metadata_cliente.__dict__,
+            total_conversiones=click.total_conversiones,
+            valor_total=click.valor_total,
+            comision_total=click.comision_total
         )
         self.db.add(db_click)
         self.db.commit()
@@ -35,7 +39,10 @@ class RepositorioClicksSQL(RepositorioClicks):
             url_origen=db_click.url_origen,
             url_destino=db_click.url_destino,
             timestamp=db_click.timestamp,
-            metadata_cliente=db_click.metadata_cliente
+            metadata_cliente=db_click.metadata_cliente,
+            total_conversiones=db_click.total_conversiones,
+            valor_total=db_click.valor_total,
+            comision_total=db_click.comision_total
         )
 
     def obtener_por_partner(self, id_partner: str, desde: datetime = None, hasta: datetime = None) -> List[Click]:
@@ -53,10 +60,22 @@ class RepositorioClicksSQL(RepositorioClicks):
                 url_origen=db_click.url_origen,
                 url_destino=db_click.url_destino,
                 timestamp=db_click.timestamp,
-                metadata_cliente=db_click.metadata_cliente
+                metadata_cliente=db_click.metadata_cliente,
+            total_conversiones=db_click.total_conversiones,
+            valor_total=db_click.valor_total,
+            comision_total=db_click.comision_total
             )
             for db_click in query.all()
         ]
+        
+    def actualizar(self, click: Click):
+        db_click = self.db.query(ClickModel).filter(ClickModel.id == click.id_click).first()
+        if db_click:
+            db_click.total_conversiones = click.total_conversiones
+            db_click.valor_total = click.valor_total
+            db_click.comision_total = click.comision_total
+            self.db.commit()
+            self.db.refresh(db_click)
 
 class RepositorioConversionesSQL(RepositorioConversiones):
     def __init__(self, db: Session):
@@ -105,7 +124,7 @@ class RepositorioConversionesSQL(RepositorioConversiones):
             # Update existing atribuciones
             for atribucion in conversion.atribuciones:
                 db_atribucion = AtribucionModel(
-                    id=str(len(db_conversion.atribuciones) + 1),
+                    id=str(uuid4()),
                     id_conversion=conversion.id,
                     modelo=atribucion.modelo.value,
                     porcentaje=atribucion.porcentaje,

@@ -16,6 +16,10 @@ class RepositorioClicks(ABC):
     @abstractmethod
     def agregar(self, click: Click):
         ...
+        
+    @abstractmethod
+    def actualizar(self, click: Click):
+        ...
 
 class RepositorioConversiones(ABC):
     @abstractmethod

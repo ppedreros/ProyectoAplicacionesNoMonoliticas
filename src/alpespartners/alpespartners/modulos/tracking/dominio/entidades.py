@@ -18,21 +18,28 @@ class AgregacionRaiz(Entidad):
         self.eventos.append(evento)
 
 @dataclass
-class Click(Entidad):
+class Click(AgregacionRaiz):
     id_partner: str = field(default=None)
     id_campana: str = field(default=None)
     url_origen: str = field(default=None)
     url_destino: str = field(default=None)
     timestamp: datetime = field(default_factory=datetime.now)
     metadata_cliente: MetadataCliente = field(default=None)
+    total_conversiones: int = field(default=0)
+    valor_total: float = field(default=0.0)
+    comision_total: float = field(default=0.0)
 
     @property
     def id_click(self) -> str:
         return self.id
+        
+    def registrar_conversion(self, valor: float, comision: float):
+        self.total_conversiones += 1
+        self.valor_total += valor
+        self.comision_total += comision
 
 @dataclass
 class Conversion(AgregacionRaiz):
-    id_conversion: str = field(default=None)
     id_click: Optional[str] = field(default=None)
     id_partner: str = field(default=None)
     id_campana: str = field(default=None)
@@ -41,6 +48,10 @@ class Conversion(AgregacionRaiz):
     timestamp: datetime = field(default_factory=datetime.now)
     metadata_cliente: MetadataCliente = field(default=None)
     atribuciones: List[DatosAtribucion] = field(default_factory=list)
+
+    @property
+    def id_conversion(self) -> str:
+        return self.id
 
     def registrar_conversion(self):
         evento = ConversionRegistrada(
@@ -59,7 +70,7 @@ class Conversion(AgregacionRaiz):
     def asignar_atribucion(self, datos_atribucion: DatosAtribucion):
         self.atribuciones.append(datos_atribucion)
         evento = AtribucionAsignada(
-            id_atribucion=str(len(self.atribuciones)),
+            id_atribucion=str(uuid4()),
             id_conversion=self.id_conversion,
             id_partner=self.id_partner,
             id_campana=self.id_campana,
