@@ -110,3 +110,10 @@ curl -X POST "http://localhost:8000/v1/tracking/atribuciones/ID_DE_LA_CONVERSION
 - **Kafka**: Bus de eventos para publicar eventos de tracking
 
 Cada acción (click, conversión, atribución) genera un evento que se publica en Kafka, permitiendo que otros servicios reaccionen a estos eventos.
+
+## Atributos de calidad
+Los atributos de calidad a probar en el proyecto son:
+- **Mantenibilidad**
+- **Escalabilidad**
+- **Disponibilidad**
+Para cada uno de estos atributos de calidad se diseñaron 3 escenarios de calidad que se pueden ver a profundidad en la presentación de la entrega 3 del proyecto
