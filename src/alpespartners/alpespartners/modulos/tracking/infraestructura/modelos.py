@@ -13,6 +13,9 @@ class ClickModel(Base):
     url_destino = Column(String)
     timestamp = Column(DateTime)
     metadata_cliente = Column(JSON)
+    total_conversiones = Column(Integer, default=0)
+    valor_total = Column(Float, default=0.0)
+    comision_total = Column(Float, default=0.0)
 
     conversiones = relationship("ConversionModel", back_populates="click")
 

@@ -7,6 +7,9 @@ from kafka import KafkaProducer
 
 from ..config.database import get_db
 from ..config.kafka import get_kafka_producer, TOPIC_CLICKS, TOPIC_CONVERSIONES, TOPIC_ATRIBUCIONES
+from ..modulos.tracking.infraestructura.adaptadores import (
+    AdaptadorRegistrarClickSQL,
+)
 
 class ClickRequest(BaseModel):
     id_partner: str
@@ -43,25 +46,30 @@ from alpespartners.modulos.tracking.infraestructura.repositorios_sql import (
 
 router = APIRouter()
 
-def get_tracking_service(db: Session = Depends(get_db)):
+def get_tracking_service(
+    db: Session = Depends(get_db),
+    producer: KafkaProducer = Depends(get_kafka_producer)
+):
     repo_clicks = RepositorioClicksSQL(db)
     repo_conversiones = RepositorioConversionesSQL(db)
-    return ServicioTracking(repo_clicks, repo_conversiones)
+    from ..modulos.tracking.infraestructura.despachadores import DespachadorEventosKafka
+    despachador = DespachadorEventosKafka(producer)
+    return ServicioTracking(repo_clicks, repo_conversiones, despachador)
 
 @router.post("/tracking/clicks")
 async def registrar_click(
     request: ClickRequest,
-    servicio_tracking: ServicioTracking = Depends(get_tracking_service),
+    db: Session = Depends(get_db),
     producer: KafkaProducer = Depends(get_kafka_producer)
 ) -> str:
     try:
-        metadata = MetadataCliente(**request.metadata_cliente)
-        click_id = servicio_tracking.registrar_click(
+        adaptador = AdaptadorRegistrarClickSQL(db, producer)
+        click_id = adaptador.ejecutar(
             id_partner=request.id_partner,
             id_campana=request.id_campana,
             url_origen=request.url_origen,
             url_destino=request.url_destino,
-            metadata_cliente=metadata
+            metadata_cliente=request.metadata_cliente
         )
         
         # Publish event to Kafka
@@ -141,11 +149,28 @@ async def asignar_atribucion(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.get("/tracking/clicks/partner/{id_partner}")
+async def obtener_clicks_partner(
+    id_partner: str,
+    desde: Optional[datetime] = None,
+    hasta: Optional[datetime] = None,
+    servicio_tracking: ServicioTracking = Depends(get_tracking_service)
+) -> List[Click]:
+    try:
+        return servicio_tracking.obtener_clicks_partner(
+            id_partner=id_partner,
+            desde=desde,
+            hasta=hasta
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.get("/tracking/conversiones/{id_partner}")
 async def obtener_conversiones_partner(
     id_partner: str,
     desde: Optional[datetime] = None,
-    hasta: Optional[datetime] = None
+    hasta: Optional[datetime] = None,
+    servicio_tracking: ServicioTracking = Depends(get_tracking_service)
 ) -> List[Conversion]:
     try:
         return servicio_tracking.obtener_conversiones_partner(
