@@ -1,102 +1,119 @@
-# Tutorial 3 - Arquitectura Hexagonal
+# Alpes Partners - Tracking Service
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&repo=MISW4406/tutorial-3-arquitectura-hexagonal) 
+Este servicio implementa un sistema de tracking de clicks y conversiones siguiendo los principios de Domain-Driven Design (DDD) y arquitectura basada en eventos.
 
-Repositorio con código base para el desarrollo de una arquitectura hexagonal siguiendo los principios y patrones de DDD.
+## Estructura del Proyecto
 
+```
+alpespartners/
+├── modulos/
+│   └── tracking/
+│       ├── dominio/          # Capa de dominio (entidades, objetos valor, etc.)
+│       ├── aplicacion/       # Capa de aplicación (servicios)
+│       └── infraestructura/  # Capa de infraestructura (repositorios)
+├── api/                      # API REST
+└── config/                   # Configuraciones
+```
+
+## Requisitos
+
+- Docker
+- Docker Compose
+
+## Ejecución
+
+1. Clonar el repositorio
+2. Navegar al directorio del proyecto:
+   ```bash
+   cd src/alpespartners
+   ```
+3. Ejecutar los servicios:
+   ```bash
+   docker-compose up
+   ```
+
+El servicio estará disponible en `http://localhost:8000`
+
+## Endpoints
+
+### 1. Registrar Click
+```bash
+curl -X POST "http://localhost:8000/v1/tracking/clicks" \
+-H "Content-Type: application/json" \
+-d '{
+    "id_partner": "partner123",
+    "id_campana": "campaign456",
+    "url_origen": "https://google.com",
+    "url_destino": "https://mystore.com/product",
+    "metadata_cliente": {
+        "user_agent": "Mozilla/5.0",
+        "ip_address": "192.168.1.1",
+        "referrer": "https://google.com",
+        "device_info": {
+            "type": "desktop",
+            "os": "macOS"
+        },
+        "location_info": {
+            "country": "CO",
+            "city": "Bogota"
+        }
+    }
+}'
+```
+
+### 2. Registrar Conversión
+```bash
+curl -X POST "http://localhost:8000/v1/tracking/conversiones" \
+-H "Content-Type: application/json" \
+-d '{
+    "id_partner": "partner123",
+    "id_campana": "campaign456",
+    "tipo_conversion": "VENTA",
+    "informacion_monetaria": {
+        "valor": 100.50,
+        "moneda": "USD",
+        "comision": 10.05,
+        "porcentaje_comision": 10.0
+    },
+    "metadata_cliente": {
+        "user_agent": "Mozilla/5.0",
+        "ip_address": "192.168.1.1",
+        "referrer": "https://google.com",
+        "device_info": {
+            "type": "desktop",
+            "os": "macOS"
+        },
+        "location_info": {
+            "country": "CO",
+            "city": "Bogota"
+        }
+    },
+    "id_click": "ID_DEL_CLICK_PREVIO"
+}'
+```
+
+### 3. Asignar Atribución
+```bash
+curl -X POST "http://localhost:8000/v1/tracking/atribuciones/ID_DE_LA_CONVERSION" \
+-H "Content-Type: application/json" \
+-d '{
+    "modelo": "ULTIMO_CLICK",
+    "porcentaje": 100.0,
+    "ventana_atribucion": 30
+}'
+```
 
 ## Arquitectura
 
-<img width="2746" height="450" alt="3" src="https://github.com/user-attachments/assets/14822685-fbe3-475f-a880-45c3ee3e74c9" />
+- **FastAPI**: API REST
+- **PostgreSQL**: Almacenamiento de datos
+- **Kafka**: Bus de eventos para publicar eventos de tracking
 
-## Estructura del proyecto
+Cada acción (click, conversión, atribución) genera un evento que se publica en Kafka, permitiendo que otros servicios reaccionen a estos eventos.
 
-El repositorio en su raíz está estructurado de la siguiente forma:
-
-- **.github**: Directorio donde se localizan templates para Github y los CI/CD workflows 
-- **.devcontainer/devcontainer.json**: Archivo que define las tareas/pasos a ejecutar para configurar su workspace en Github Codespaces.
-- **src**: En este directorio encuentra el código fuente para AeroAlpes. En la siguiente sección se explica un poco mejor la estructura del mismo ([link](https://blog.ionelmc.ro/2014/05/25/python-packaging/#the-structure%3E) para más información)
-- **tests**: Directorio con todos los archivos de prueba, tanto unitarios como de integración. Sigue el estándar [recomendado por pytest](https://docs.pytest.org/en/7.1.x/explanation/goodpractices.html) y usado por [boto](https://github.com/boto/boto).
-- **.gitignore**: Archivo con la definición de archivos que se deben ignorar en el repositorio GIT
-- **README.md**: El archivo que está leyendo :)
-- **requirements.txt**: Archivo con los requerimientos para el correcto funcionamiento del proyecto (librerias Python)
-
-
-## Ejecutar Aplicación
-
-Desde el directorio principal ejecute el siguiente comando.
-
-```bash
-flask --app src/aeroalpes/api run
-```
-
-Siempre puede ejecutarlo en modo DEBUG:
-
-```bash
-flask --app src/aeroalpes/api --debug run
-```
-
-
-## Request de ejemplo
-
-Los siguientes JSON pueden ser usados para probar el API:
-
-### Reservar
-
-- **Endpoint**: `/vuelos/reserva`
-- **Método**: `POST`
-- **Headers**: `Content-Type='aplication/json'`
-
-```json
-{
-    "itinerarios": [
-        {
-            "odos": [
-                {
-                    "segmentos": [
-                        {
-                            "legs": [
-                                {
-                                    "fecha_salida": "2022-11-22T13:10:00Z",
-                                    "fecha_llegada": "2022-11-22T15:10:00Z",
-                                    "destino": {
-                                        "codigo": "JFK",
-                                        "nombre": "John F. Kennedy International Airport"
-                                    },
-                                    "origen": {
-                                        "codigo": "BOG",
-                                        "nombre": "El Dorado - Bogotá International Airport (BOG)"
-                                    }
-
-                                }
-                            ]
-                        }
-                    ]
-                }
-
-            ]
-        }
-    ]
-}
-```
-
-### Ver Reserva(s)
-
-- **Endpoint**: `/vuelos/reserva/{id}`
-- **Método**: `GET`
-- **Headers**: `Content-Type='aplication/json'`
-
-## Ejecutar pruebas
-
-```bash
-coverage run -m pytest
-```
-
-# Ver reporte de covertura
-```bash
-coverage report
-```
-## Diagrama con Flujo Crear Reserva
-A continuación un diagrama mostrando como es el flujo de un request de reservar o crear reserva  a través de las diferentes capas:
-
-![image](https://github.com/user-attachments/assets/70b93bd8-b799-4f96-8a0f-708341d91187)
+## Atributos de calidad
+Los atributos de calidad a probar en el proyecto son:
+- **Mantenibilidad**
+- **Escalabilidad**
+- **Disponibilidad**
+Para cada uno de estos atributos de calidad se diseñaron 3 escenarios de calidad que se pueden ver a profundidad en la presentación de la entrega 3 del proyecto
