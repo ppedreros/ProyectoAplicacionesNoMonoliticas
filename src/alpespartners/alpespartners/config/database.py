@@ -16,3 +16,14 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def get_loyalty_db():
+    """
+    Función específica para obtener sesión de DB para Loyalty Service.
+    Por ahora usa topología híbrida (descentralizada lógicamente, centralizada físicamente para el POC).
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
