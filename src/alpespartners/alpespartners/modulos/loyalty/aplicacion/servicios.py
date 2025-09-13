@@ -5,13 +5,12 @@ from uuid import uuid4
 
 from ..dominio.entidades import Embajador
 from ..dominio.repositorios import RepositorioEmbajadores
-from ..dominio.objetos_valor import TipoEmbajador, EstadoEmbajador, InformacionContacto, TipoReferido
+from ..dominio.objetos_valor import EstadoEmbajador
 from ..dominio.eventos import EmbajadorCreado, EmbajadorActivado, ReferidoRegistrado
 from ....seedwork.dominio.eventos import Despachador
 
 @dataclass
 class ServicioLoyalty:
-    
     
     repositorio_embajadores: RepositorioEmbajadores
     despachador: Despachador
@@ -19,25 +18,19 @@ class ServicioLoyalty:
     def crear_embajador(self,
                        nombre: str,
                        email: str,
-                       tipo: TipoEmbajador,
-                       id_partner: Optional[str] = None,
-                       informacion_contacto: Optional[dict] = None) -> str:
-        
+                       id_partner: Optional[str] = None) -> str:
+
         embajador_existente = self.repositorio_embajadores.obtener_por_email(email)
         if embajador_existente:
             raise ValueError(f"Ya existe un embajador con el email {email}")
         
         info_contacto = None
-        if informacion_contacto:
-            info_contacto = InformacionContacto(**informacion_contacto)
         
         embajador = Embajador(
             nombre=nombre,
             email=email,
-            tipo=tipo,
             estado=EstadoEmbajador.PENDIENTE,
             id_partner=id_partner,
-            informacion_contacto=info_contacto,
             fecha_registro=datetime.now()
         )
         
@@ -73,7 +66,6 @@ class ServicioLoyalty:
                           id_embajador: str,
                           email_referido: str,
                           nombre_referido: Optional[str] = None,
-                          tipo_referido: TipoReferido = TipoReferido.REGISTRO,
                           valor_conversion: float = 0.0,
                           porcentaje_comision: float = 5.0,
                           metadata_referido: Optional[dict] = None) -> str:
@@ -104,7 +96,6 @@ class ServicioLoyalty:
             id_partner=embajador.id_partner,
             email_referido=email_referido,
             nombre_referido=nombre_referido,
-            tipo_referido=tipo_referido.value,
             valor_conversion=valor_conversion,
             comision_embajador=comision_embajador,
             metadata_referido=metadata_referido or {},

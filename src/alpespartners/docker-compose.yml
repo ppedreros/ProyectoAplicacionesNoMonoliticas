@@ -72,6 +72,31 @@ services:
       interval: 5s
       timeout: 10s
       retries: 5
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: |
+      bash -c '
+        echo "Esperando a que Kafka esté listo..."
+        sleep 10
+        
+        echo "Creando tópicos para Tracking Service..."
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1 --topic tracking.clicks
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1 --topic tracking.conversiones
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1 --topic tracking.atribuciones
+        
+        echo "Creando tópicos para Loyalty Service..."
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1 --topic loyalty.embajadores.eventos
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1 --topic loyalty.referidos.eventos
+        
+        echo "Listando todos los tópicos creados:"
+        kafka-topics --list --bootstrap-server kafka:9092
+        
+        echo "Tópicos de Kafka configurados correctamente!"
+      '
+    restart: "no"
 
 
 volumes:
