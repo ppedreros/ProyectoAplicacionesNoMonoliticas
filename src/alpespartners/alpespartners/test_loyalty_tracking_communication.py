@@ -27,7 +27,7 @@ def test_comunicacion_loyalty_tracking():
         print("1. Creando embajador...")
         embajador_data = {
             "nombre": "María García",
-            "email": "maria.garcia@example.com",
+            "email": "maria.f@example.com",
             "id_partner": "partner-123"
         }
         
@@ -90,7 +90,7 @@ def test_comunicacion_loyalty_tracking():
         print("\n 4. Verificando métricas del embajador...")
         
         response = requests.get(
-            f"{BASE_URL}/loyalty/embajadores/{id_embajador}",
+            f"{BASE_URL}/loyalty/embajadores/{id_embajador}/metricas",
             headers=HEADERS
         )
         

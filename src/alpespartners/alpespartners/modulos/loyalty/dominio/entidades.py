@@ -52,7 +52,7 @@ class Embajador(AgregacionRaiz):
         if self.estado == EstadoEmbajador.PENDIENTE:
             self.estado = EstadoEmbajador.ACTIVO
 
-    def registrar_referido_exitoso(self, comision: float = 0.0):
+    def registrar_referido_exitoso(self, valor_conversion: float = 0.0, comision: float = 0.0):
         """Actualiza las métricas cuando se registra un referido exitoso"""
         self.total_referidos += 1
         self.comisiones_ganadas += comision

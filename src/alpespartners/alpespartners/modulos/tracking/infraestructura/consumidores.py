@@ -33,7 +33,19 @@ class ConsumidorEventosLoyalty:
                 auto_offset_reset='earliest',  # Leer desde el principio si es nuevo consumer
                 enable_auto_commit=True,
                 value_deserializer=lambda x: json.loads(x.decode('utf-8')),
-                consumer_timeout_ms=1000
+
+                consumer_timeout_ms=5000,        # Timeout para evitar bloqueos
+                session_timeout_ms=30000,        # Sesión más larga (30 seg)
+                heartbeat_interval_ms=10000,     # Heartbeat cada 10 seg
+                max_poll_interval_ms=300000,     # Max 5 min entre polls
+                request_timeout_ms=40000,        # Request timeout 40 seg
+                connections_max_idle_ms=540000,  # Conexiones idle 9 min
+            
+                # Configuraciones adicionales para estabilidad:
+                api_version=(0, 10, 1),          # Versión de API compatible
+                security_protocol='PLAINTEXT',   # Protocolo simple
+                fetch_min_bytes=1,               # Fetch mínimo
+                fetch_max_wait_ms=500,           # Wait máximo para fetch
             )
             logger.info("Consumer de eventos Loyalty inicializado correctamente")
             

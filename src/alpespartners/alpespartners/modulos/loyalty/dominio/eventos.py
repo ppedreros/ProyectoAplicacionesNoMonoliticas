@@ -34,12 +34,13 @@ class ReferidoRegistrado(EventoDominio):
     nombre_referido: Optional[str]
     valor_conversion: float
     comision_embajador: float
-    timestamp: datetime
+    metadata_referido: Optional[Dict] = None
+    timestamp: datetime = None
     
     def __init__(self, id_referido: str, id_embajador: str, id_partner: Optional[str],
                  email_referido: str, nombre_referido: Optional[str],
-                 valor_conversion: float, comision_embajador: float, 
-                 timestamp: datetime):
+                 valor_conversion: float, comision_embajador: float, metadata_referido: Optional[Dict] = None,
+                 timestamp: datetime = None):
         super().__init__()
         self.id_referido = id_referido
         self.id_embajador = id_embajador
@@ -48,7 +49,8 @@ class ReferidoRegistrado(EventoDominio):
         self.nombre_referido = nombre_referido
         self.valor_conversion = valor_conversion
         self.comision_embajador = comision_embajador
-        self.timestamp = timestamp
+        self.metadata_referido = metadata_referido or {}
+        self.timestamp = timestamp or datetime.now()
 
 @dataclass
 class EmbajadorActivado(EventoDominio):

@@ -1,16 +1,16 @@
 import os
 from .despachadores import FabricaDespachadorLoyalty
 
-KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
+PULSAR_SERVICE_URL = os.getenv('PULSAR_SERVICE_URL', 'pulsar://pulsar:6650')
 
-def get_loyalty_kafka_producer():
+def get_loyalty_pulsar_producer():
     """
-    Función para obtener el despachador de eventos de Loyalty Service.
+    Función para obtener el despachador de eventos de Loyalty Service usando Pulsar.
     Usado por dependency injection en FastAPI.
     """
-    return FabricaDespachadorLoyalty.crear_despachador_kafka(KAFKA_BOOTSTRAP_SERVERS)
+    return FabricaDespachadorLoyalty.crear_despachador_pulsar()
 
 TOPICS = {
-    'EMBAJADORES_EVENTOS': 'loyalty.embajadores.eventos',
-    'REFERIDOS_EVENTOS': 'loyalty.referidos.eventos'
+    'EMBAJADORES_EVENTOS': 'persistent://public/default/loyalty-embajadores-eventos',
+    'REFERIDOS_EVENTOS': 'persistent://public/default/loyalty-referidos-eventos'
 }

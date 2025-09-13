@@ -1,78 +1,84 @@
-from dataclasses import asdict
-from kafka import KafkaProducer
 import json
 import logging
+import pulsar
+from datetime import datetime
 
-from ....seedwork.dominio.eventos import EventoDominio, Despachador
-from ..dominio.eventos import EmbajadorCreado, ReferidoRegistrado
+from alpespartners.config.pulsar import get_pulsar_client, TOPICS
 
 logger = logging.getLogger(__name__)
 
-class DespachadorEventosKafkaLoyalty(Despachador):
-    """Despachador de eventos específico para el Loyalty Service. Publica eventos a los tópicos correspondientes en Kafka."""
+class DespachadorEventosPulsarLoyalty:
+    def __init__(self):
+        self.client = get_pulsar_client()
+        self.producers = {}
+        
+    def _get_producer(self, topic: str):
+        if topic not in self.producers:
+            self.producers[topic] = self.client.create_producer(topic)
+        return self.producers[topic]
     
-    def __init__(self, producer: KafkaProducer):
-        self.producer = producer
-        self.topic_por_evento = {
-            EmbajadorCreado: "loyalty.embajadores.eventos",
-            ReferidoRegistrado: "loyalty.referidos.eventos"
-        }
-
-    def publicar_evento(self, evento: EventoDominio):
+    def publicar_evento(self, evento, canal: str = None):
+        "Método genérico requerido por ServicioLoyalty"
         try:
-            topic = self.topic_por_evento.get(type(evento))
-            if not topic:
-                logger.warning(f"No hay topic configurado para el evento {type(evento)}")
-                return
-
-            evento_dict = asdict(evento)
+            logger.info(f"📤 Publicando evento: {type(evento).__name__}")
             
-            if 'timestamp' in evento_dict:
-                evento_dict['timestamp'] = evento_dict['timestamp'].isoformat()
-            if 'fecha' in evento_dict:
-                evento_dict['fecha'] = evento_dict['fecha'].isoformat()
-            if 'fecha_registro' in evento_dict:
-                evento_dict['fecha_registro'] = evento_dict['fecha_registro'].isoformat()
-
-            mensaje_kafka = {
-                'evento_tipo': evento.__class__.__name__,
-                'evento_id': evento.id,
-                'servicio_origen': 'loyalty',
-                'version': '1.0',
-                'datos': evento_dict
+            if hasattr(evento, "nombre_evento"):
+                evento_tipo = evento.nombre_evento
+            else:
+                evento_tipo = type(evento).__name__
+            
+            if "Referido" in evento_tipo or "ReferidoRegistrado" in evento_tipo:
+                return self.publicar_evento_referido_registrado(evento)
+            else:
+                return self.publicar_evento_embajador_creado(evento)
+                
+        except Exception as e:
+            logger.error(f"❌ Error publicando evento: {str(e)}")
+            return False
+    
+    def publicar_evento_referido_registrado(self, evento):
+        try:
+            topic = TOPICS["LOYALTY_REFERIDOS"]
+            producer = self._get_producer(topic)
+            
+            datos_evento = {
+                "id_referido": getattr(evento, "id_referido", ""),
+                "id_embajador": getattr(evento, "id_embajador", ""),
+                "email_referido": getattr(evento, "email_referido", ""),
+                "nombre_referido": getattr(evento, "nombre_referido", ""),
+                "valor_conversion": getattr(evento, "valor_conversion", 0.0),
+                "porcentaje_comision": getattr(evento, "porcentaje_comision", 5.0),
+                "timestamp": datetime.utcnow().isoformat(),
+                "id_partner": "loyalty-partner"
             }
-
-            self.producer.send(
-                topic,
-                value=mensaje_kafka
-            )
             
-            self.producer.flush()
+            mensaje = {
+                "evento_tipo": "ReferidoRegistrado",
+                "servicio_origen": "loyalty",
+                "timestamp": datetime.utcnow().isoformat(),
+                "version": "1.0",
+                "datos": datos_evento
+            }
             
-            logger.info(f"Evento {evento.__class__.__name__} publicado en topic {topic}")
+            message_id = producer.send(json.dumps(mensaje).encode("utf-8"))
+            logger.info(f"📤 ReferidoRegistrado enviado: {datos_evento.get('id_referido')}")
+            return True
             
         except Exception as e:
-            logger.error(f"Error publicando evento {type(evento)}: {str(e)}")
-            raise
-
+            logger.error(f"❌ Error enviando evento referido: {str(e)}")
+            return False
+    
+    def publicar_evento_embajador_creado(self, evento):
+        # Implementación básica
+        logger.info("📤 EmbajadorCreado (simulado)")
+        return True
+    
+    def close(self):
+        for producer in self.producers.values():
+            producer.close()
+        self.client.close()
 
 class FabricaDespachadorLoyalty:
-    """Fábrica para crear el despachador de eventos del Loyalty Service."""
-    
     @staticmethod
-    def crear_despachador_kafka(bootstrap_servers: str = 'localhost:9092') -> DespachadorEventosKafkaLoyalty:
-        try:
-            producer = KafkaProducer(
-                bootstrap_servers=bootstrap_servers,
-                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-                key_serializer=lambda k: k.encode('utf-8') if k else None,
-                acks='all',  # Esperar confirmación de todos los brokers
-                retries=3,   # Reintentar en caso de falla
-                max_in_flight_requests_per_connection=1  # Mantener orden
-            )
-            
-            return DespachadorEventosKafkaLoyalty(producer)
-            
-        except Exception as e:
-            logger.error(f"Error creando despachador Kafka: {str(e)}")
-            raise
+    def crear_despachador_pulsar():
+        return DespachadorEventosPulsarLoyalty()

@@ -5,4 +5,5 @@ sqlalchemy==2.0.43
 psycopg2-binary==2.9.10
 alembic==1.16.5
 python-dotenv==1.1.1
-kafka-python==2.2.15
+pulsar-client==3.4.0
+requests==2.31.0
