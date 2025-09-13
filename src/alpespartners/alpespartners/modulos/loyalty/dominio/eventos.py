@@ -49,3 +49,15 @@ class ReferidoRegistrado(EventoDominio):
         self.valor_conversion = valor_conversion
         self.comision_embajador = comision_embajador
         self.timestamp = timestamp
+
+@dataclass
+class EmbajadorActivado(EventoDominio):
+    id_embajador: str
+    id_partner: Optional[str]
+    fecha_activacion: datetime
+    
+    def __init__(self, id_embajador: str, id_partner: Optional[str], fecha_activacion: datetime):
+        super().__init__()
+        self.id_embajador = id_embajador
+        self.id_partner = id_partner
+        self.fecha_activacion = fecha_activacion
