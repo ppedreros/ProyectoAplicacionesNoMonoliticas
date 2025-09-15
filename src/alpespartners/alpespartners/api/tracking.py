@@ -1,70 +1,47 @@
 from fastapi import APIRouter, HTTPException, Depends
-from datetime import datetime
-from typing import Optional, Dict, List
+from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from kafka import KafkaProducer
 
 from ..config.database import get_db
-from ..config.kafka import get_kafka_producer, TOPIC_CLICKS, TOPIC_CONVERSIONES, TOPIC_ATRIBUCIONES
-from ..modulos.tracking.infraestructura.adaptadores import (
-    AdaptadorRegistrarClickSQL,
-)
+from ..modulos.tracking.aplicacion.servicios import ServicioTracking
+from ..modulos.tracking.dominio.objetos_valor import TipoConversion, ModeloAtribucion
+from ..modulos.tracking.infraestructura.repositorios_sql import RepositorioClicksSQL, RepositorioConversionesSQL
+from ..modulos.tracking.infraestructura.despachadores import crear_despachador_pulsar
 
+# DTOs
 class ClickRequest(BaseModel):
     id_partner: str
     id_campana: str
     url_origen: str
     url_destino: str
-    metadata_cliente: Dict
+    metadata_cliente: Dict[str, Any]
 
 class ConversionRequest(BaseModel):
     id_partner: str
     id_campana: str
     tipo_conversion: str
-    informacion_monetaria: Dict
-    metadata_cliente: Dict
+    informacion_monetaria: Dict[str, Any]
+    metadata_cliente: Dict[str, Any]
     id_click: Optional[str] = None
-
-class AtribucionRequest(BaseModel):
-    modelo: str
-    porcentaje: float
-    ventana_atribucion: int
-
-from alpespartners.modulos.tracking.aplicacion.servicios import ServicioTracking
-from alpespartners.modulos.tracking.dominio.entidades import Click, Conversion
-from alpespartners.modulos.tracking.dominio.objetos_valor import (
-    MetadataCliente,
-    InformacionMonetaria,
-    TipoConversion,
-    ModeloAtribucion
-)
-from alpespartners.modulos.tracking.infraestructura.repositorios_sql import (
-    RepositorioClicksSQL,
-    RepositorioConversionesSQL
-)
 
 router = APIRouter()
 
-def get_tracking_service(
-    db: Session = Depends(get_db),
-    producer: KafkaProducer = Depends(get_kafka_producer)
-):
+def get_tracking_service(db: Session = Depends(get_db)) -> ServicioTracking:
+    """Dependency injection para el servicio de Tracking."""
     repo_clicks = RepositorioClicksSQL(db)
     repo_conversiones = RepositorioConversionesSQL(db)
-    from ..modulos.tracking.infraestructura.despachadores import DespachadorEventosKafka
-    despachador = DespachadorEventosKafka(producer)
+    despachador = crear_despachador_pulsar()
     return ServicioTracking(repo_clicks, repo_conversiones, despachador)
 
 @router.post("/tracking/clicks")
 async def registrar_click(
     request: ClickRequest,
-    db: Session = Depends(get_db),
-    producer: KafkaProducer = Depends(get_kafka_producer)
-) -> str:
+    servicio_tracking: ServicioTracking = Depends(get_tracking_service)
+) -> Dict[str, str]:
+    """Registra un click y publica evento en Pulsar."""
     try:
-        adaptador = AdaptadorRegistrarClickSQL(db, producer)
-        click_id = adaptador.ejecutar(
+        id_click = servicio_tracking.registrar_click(
             id_partner=request.id_partner,
             id_campana=request.id_campana,
             url_origen=request.url_origen,
@@ -72,111 +49,77 @@ async def registrar_click(
             metadata_cliente=request.metadata_cliente
         )
         
-        # Publish event to Kafka
-        producer.send(TOPIC_CLICKS, {
-            'id_click': click_id,
-            'id_partner': request.id_partner,
-            'id_campana': request.id_campana,
-            'url_origen': request.url_origen,
-            'url_destino': request.url_destino,
-            'metadata_cliente': request.metadata_cliente,
-            'timestamp': datetime.now().isoformat()
-        })
+        return {
+            "id_click": id_click,
+            "mensaje": "Click registrado exitosamente",
+            "evento_broker": "Apache Pulsar"
+        }
         
-        return click_id
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/tracking/conversiones")
 async def registrar_conversion(
     request: ConversionRequest,
-    servicio_tracking: ServicioTracking = Depends(get_tracking_service),
-    producer: KafkaProducer = Depends(get_kafka_producer)
-) -> str:
+    servicio_tracking: ServicioTracking = Depends(get_tracking_service)
+) -> Dict[str, str]:
+    """Registra una conversión y publica evento en Pulsar."""
     try:
-        tipo = TipoConversion(request.tipo_conversion)
-        info_monetaria = InformacionMonetaria(**request.informacion_monetaria)
-        metadata = MetadataCliente(**request.metadata_cliente)
+        tipo_map = {
+            "VENTA": TipoConversion.VENTA,
+            "REGISTRO": TipoConversion.REGISTRO,
+            "LEAD": TipoConversion.LEAD
+        }
         
-        conversion_id = servicio_tracking.registrar_conversion(
+        tipo = tipo_map.get(request.tipo_conversion.upper())
+        if not tipo:
+            raise ValueError(f"Tipo de conversión no válido: {request.tipo_conversion}")
+        
+        id_conversion = servicio_tracking.registrar_conversion(
             id_partner=request.id_partner,
             id_campana=request.id_campana,
             tipo=tipo,
-            informacion_monetaria=info_monetaria,
-            metadata_cliente=metadata,
+            informacion_monetaria=request.informacion_monetaria,
+            metadata_cliente=request.metadata_cliente,
             id_click=request.id_click
         )
         
-        producer.send(TOPIC_CONVERSIONES, {
-            'id_conversion': conversion_id,
-            'id_click': request.id_click,
-            'id_partner': request.id_partner,
-            'id_campana': request.id_campana,
-            'tipo_conversion': request.tipo_conversion,
-            'informacion_monetaria': request.informacion_monetaria,
-            'metadata_cliente': request.metadata_cliente,
-            'timestamp': datetime.now().isoformat()
-        })
+        return {
+            "id_conversion": id_conversion,
+            "mensaje": "Conversión registrada exitosamente"
+        }
         
-        return conversion_id
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.post("/tracking/atribuciones/{id_conversion}")
-async def asignar_atribucion(
-    id_conversion: str,
-    request: AtribucionRequest,
-    servicio_tracking: ServicioTracking = Depends(get_tracking_service),
-    producer: KafkaProducer = Depends(get_kafka_producer)
-):
-    try:
-        modelo_atribucion = ModeloAtribucion(request.modelo)
-        servicio_tracking.asignar_atribucion(
-            id_conversion=id_conversion,
-            modelo=modelo_atribucion,
-            porcentaje=request.porcentaje,
-            ventana_atribucion=request.ventana_atribucion
-        )
-        
-        # Publish event to Kafka
-        producer.send(TOPIC_ATRIBUCIONES, {
-            'id_conversion': id_conversion,
-            'modelo': request.modelo,
-            'porcentaje': request.porcentaje,
-            'ventana_atribucion': request.ventana_atribucion,
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.get("/tracking/clicks/partner/{id_partner}")
-async def obtener_clicks_partner(
-    id_partner: str,
-    desde: Optional[datetime] = None,
-    hasta: Optional[datetime] = None,
-    servicio_tracking: ServicioTracking = Depends(get_tracking_service)
-) -> List[Click]:
-    try:
-        return servicio_tracking.obtener_clicks_partner(
-            id_partner=id_partner,
-            desde=desde,
-            hasta=hasta
-        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/tracking/conversiones/{id_partner}")
 async def obtener_conversiones_partner(
     id_partner: str,
-    desde: Optional[datetime] = None,
-    hasta: Optional[datetime] = None,
     servicio_tracking: ServicioTracking = Depends(get_tracking_service)
-) -> List[Conversion]:
+):
+    """Obtiene conversiones de un partner específico."""
     try:
-        return servicio_tracking.obtener_conversiones_partner(
-            id_partner=id_partner,
-            desde=desde,
-            hasta=hasta
-        )
+        conversiones = servicio_tracking.obtener_conversiones_partner(id_partner)
+        # Convertir entidades a diccionarios para JSON
+        conversiones_json = []
+        for conversion in conversiones:
+            try:
+                conversiones_json.append({
+                    "id_conversion": getattr(conversion, "id_conversion", ""),
+                    "id_partner": getattr(conversion, "id_partner", ""),
+                    "id_campana": getattr(conversion, "id_campana", ""),
+                    "tipo": str(getattr(conversion, "tipo", "")),
+                    "valor": getattr(conversion.informacion_monetaria, "valor", 0) if hasattr(conversion, "informacion_monetaria") else 0,
+                    "comision": getattr(conversion.informacion_monetaria, "comision", 0) if hasattr(conversion, "informacion_monetaria") else 0,
+                    "id_click": getattr(conversion, "id_click", "")
+                })
+            except Exception as e:
+                # Si hay problemas serializando, agregar versión simple
+                conversiones_json.append({
+                    "id_conversion": str(conversion),
+                    "error": str(e)
+                })
+        
+        return conversiones_json
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
