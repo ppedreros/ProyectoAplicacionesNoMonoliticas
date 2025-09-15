@@ -90,6 +90,14 @@ services:
         bin/pulsar-admin topics create persistent://public/default/loyalty-embajadores-eventos
         bin/pulsar-admin topics create persistent://public/default/loyalty-referidos-eventos
         
+        echo 'Creando tópicos para Payment Service...'
+        bin/pulsar-admin topics create persistent://public/default/pagos-eventos
+        bin/pulsar-admin topics create persistent://public/default/pagos-comandos
+        
+        echo 'Creando tópicos para Afiliados Service...'
+        bin/pulsar-admin topics create persistent://public/default/afiliados-eventos
+        bin/pulsar-admin topics create persistent://public/default/afiliados-comandos
+        
         echo 'Listando tópicos creados:'
         bin/pulsar-admin topics list public/default
         
