@@ -36,8 +36,11 @@ async def health_check():
     try:
         from alpespartners.config.pulsar import get_pulsar_client
         client = get_pulsar_client()
-        client.close()
-        health_status["pulsar_status"] = "connected"
+        if client is None:
+            health_status["pulsar_status"] = "unavailable"
+        else:
+            client.close()
+            health_status["pulsar_status"] = "connected"
     except Exception as e:
         health_status["pulsar_status"] = f"error: {str(e)}"
     

@@ -11,10 +11,27 @@ class DespachadorEventosPulsarLoyalty:
     def __init__(self):
         self.client = get_pulsar_client()
         self.producers = {}
+        self._producer_errors = {}
         
     def _get_producer(self, topic: str):
+        """Obtiene o crea un producer para el topic especificado"""
+        if topic in self._producer_errors:
+            return None
+            
         if topic not in self.producers:
-            self.producers[topic] = self.client.create_producer(topic)
+            if self.client is None:
+                logger.warning(f"Cliente de Pulsar no disponible para topic: {topic}")
+                self._producer_errors[topic] = Exception("Cliente de Pulsar no disponible")
+                return None
+                
+            try:
+                self.producers[topic] = self.client.create_producer(topic)
+                logger.info(f"Producer creado exitosamente para topic: {topic}")
+            except Exception as e:
+                logger.error(f"Error creando producer para topic {topic}: {str(e)}")
+                self._producer_errors[topic] = e
+                return None
+                
         return self.producers[topic]
     
     def publicar_evento(self, evento, canal: str = None):
@@ -40,6 +57,10 @@ class DespachadorEventosPulsarLoyalty:
         try:
             topic = TOPICS["LOYALTY_REFERIDOS"]
             producer = self._get_producer(topic)
+            
+            if producer is None:
+                logger.warning(f"No se pudo crear producer de Pulsar para topic {topic}, evento no publicado")
+                return False
             
             datos_evento = {
                 "id_referido": getattr(evento, "id_referido", ""),
@@ -74,9 +95,21 @@ class DespachadorEventosPulsarLoyalty:
         return True
     
     def close(self):
-        for producer in self.producers.values():
-            producer.close()
-        self.client.close()
+        """Cierra todos los producers y el cliente de Pulsar"""
+        try:
+            for producer in self.producers.values():
+                if producer:
+                    producer.close()
+            logger.info("Producers de Pulsar cerrados exitosamente")
+        except Exception as e:
+            logger.error(f"Error cerrando producers de Pulsar: {str(e)}")
+        
+        try:
+            if self.client:
+                self.client.close()
+                logger.info("Cliente de Pulsar cerrado exitosamente")
+        except Exception as e:
+            logger.error(f"Error cerrando cliente de Pulsar: {str(e)}")
 
 class FabricaDespachadorLoyalty:
     @staticmethod

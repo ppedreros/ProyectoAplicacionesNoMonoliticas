@@ -80,7 +80,10 @@ class ServicioPagos:
             evento_pago = self._crear_evento_pago(pago.id_pago, evento)
             self.repositorio_eventos.guardar_evento(evento_pago)
             
-            # Agregar al outbox para publicación
+            # Publicar evento directamente a Pulsar
+            self.despachador.publicar_evento(evento)
+            
+            # Agregar al outbox para publicación (como respaldo)
             self.repositorio_outbox.agregar_evento_outbox(
                 evento_id=str(uuid4()),
                 evento_tipo=evento.__class__.__name__,
@@ -130,7 +133,10 @@ class ServicioPagos:
             evento_pago = self._crear_evento_pago(pago.id_pago, evento)
             self.repositorio_eventos.guardar_evento(evento_pago)
             
-            # Agregar al outbox
+            # Publicar evento directamente a Pulsar
+            self.despachador.publicar_evento(evento)
+            
+            # Agregar al outbox (como respaldo)
             self.repositorio_outbox.agregar_evento_outbox(
                 evento_id=str(uuid4()),
                 evento_tipo=evento.__class__.__name__,
@@ -179,7 +185,10 @@ class ServicioPagos:
             evento_pago = self._crear_evento_pago(pago.id_pago, evento)
             self.repositorio_eventos.guardar_evento(evento_pago)
             
-            # Agregar al outbox
+            # Publicar evento directamente a Pulsar
+            self.despachador.publicar_evento(evento)
+            
+            # Agregar al outbox (como respaldo)
             self.repositorio_outbox.agregar_evento_outbox(
                 evento_id=str(uuid4()),
                 evento_tipo=evento.__class__.__name__,
