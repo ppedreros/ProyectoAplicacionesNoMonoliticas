@@ -14,11 +14,41 @@ class DespachadorEventosPago(Despachador):
     def __init__(self, pulsar_client, topic_pagos: str):
         self.pulsar_client = pulsar_client
         self.topic_pagos = topic_pagos
-        self.producer = pulsar_client.create_producer(topic_pagos)
+        self.producer = None
+        self._producer_created = False
+        self._producer_error = None
     
-    def publicar_evento(self, evento) -> None:
+    def _ensure_producer(self):
+        """Crea el producer de Pulsar si no existe"""
+        if self._producer_created:
+            return self.producer is not None
+        
+        if self._producer_error:
+            return False
+        
+        if self.pulsar_client is None:
+            logger.warning("Cliente de Pulsar no disponible")
+            self._producer_error = Exception("Cliente de Pulsar no disponible")
+            return False
+            
+        try:
+            self.producer = self.pulsar_client.create_producer(self.topic_pagos)
+            self._producer_created = True
+            logger.info(f"Producer creado exitosamente para topic: {self.topic_pagos}")
+            return True
+        except Exception as e:
+            self._producer_error = e
+            logger.error(f"Error creando producer de Pulsar: {str(e)}")
+            return False
+    
+    def publicar_evento(self, evento) -> bool:
         """Publica un evento de pago a Pulsar"""
         try:
+            # Asegurar que el producer existe
+            if not self._ensure_producer():
+                logger.warning(f"No se pudo crear producer de Pulsar, evento no publicado: {evento.__class__.__name__}")
+                return False
+            
             # Serializar evento a JSON
             evento_data = self._serializar_evento(evento)
             
@@ -33,10 +63,11 @@ class DespachadorEventosPago(Despachador):
             )
             
             logger.info(f"Evento {evento.__class__.__name__} publicado exitosamente")
+            return True
             
         except Exception as e:
             logger.error(f"Error publicando evento {evento.__class__.__name__}: {str(e)}")
-            raise
+            return False
     
     def _serializar_evento(self, evento) -> Dict[str, Any]:
         """Serializa un evento de dominio a diccionario"""
@@ -110,4 +141,8 @@ class DespachadorEventosPago(Despachador):
     def cerrar(self) -> None:
         """Cierra el producer de Pulsar"""
         if self.producer:
-            self.producer.close()
+            try:
+                self.producer.close()
+                logger.info("Producer de Pulsar cerrado exitosamente")
+            except Exception as e:
+                logger.error(f"Error cerrando producer de Pulsar: {str(e)}")
