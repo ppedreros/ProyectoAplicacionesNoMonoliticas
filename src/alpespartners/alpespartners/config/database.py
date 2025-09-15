@@ -27,3 +27,13 @@ def get_loyalty_db():
         yield db
     finally:
         db.close()
+
+def get_db_session():
+    """
+    Función para obtener sesión de DB para servicios que no usan FastAPI dependency injection.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
