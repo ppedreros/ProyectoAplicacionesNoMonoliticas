@@ -9,7 +9,11 @@ TOPICS = {
     "PAGOS_EVENTOS": "persistent://public/default/pagos-eventos",
     "PAGOS_COMANDOS": "persistent://public/default/pagos-comandos",
     "AFILIADOS_EVENTOS": "persistent://public/default/afiliados-eventos",
-    "AFILIADOS_COMANDOS": "persistent://public/default/afiliados-comandos"
+    "AFILIADOS_COMANDOS": "persistent://public/default/afiliados-comandos",
+    "COMANDO_REGISTRAR_CLICK": "persistent://public/default/comando-registrar-click",
+    "COMANDO_REGISTRAR_CONVERSION": "persistent://public/default/comando-registrar-conversion", 
+    "COMANDO_CREAR_AFILIADO": "persistent://public/default/comando-crear-afiliado",
+    "COMANDO_CREAR_PAGO": "persistent://public/default/comando-crear-pago"
 }
 
 def get_pulsar_client():
@@ -18,11 +22,8 @@ def get_pulsar_client():
         client = pulsar.Client(
             PULSAR_SERVICE_URL,
             connection_timeout_ms=5000,  # 5 segundos timeout
-            operation_timeout_ms=30000,  # 30 segundos timeout
-            keep_alive_interval_ms=30000  # Keep alive cada 30 segundos
         )
         return client
     except Exception as e:
         print(f"Error creando cliente de Pulsar: {str(e)}")
-        # Retornar None para que el despachador pueda manejar la ausencia de Pulsar
         return None

@@ -1,17 +1,66 @@
 import os
 from fastapi import FastAPI
 import uvicorn
+from contextlib import asynccontextmanager
+import threading
+import time
 
 from alpespartners.api.tracking import router as tracking_router
 from alpespartners.api.loyalty import router as loyalty_router
 from alpespartners.api.pagos import router as pagos_router
 from alpespartners.api.afiliados import router as afiliados_router
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("INICIANDO LIFESPAN...")
+    
+    def iniciar_consumidor():
+        print("THREAD CONSUMIDOR: Esperando 3 segundos...")
+        time.sleep(3)
+        try:
+            print("THREAD CONSUMIDOR: Importando módulos...")
+            from alpespartners.config.database import get_db_session
+            from alpespartners.modulos.tracking.infraestructura.repositorios_sql import (
+                RepositorioClicksSQL, RepositorioConversionesSQL
+            )
+            from alpespartners.modulos.tracking.infraestructura.despachadores import DespachadorEventosPulsar
+            from alpespartners.modulos.tracking.aplicacion.servicios import ServicioTracking
+            from alpespartners.modulos.tracking.infraestructura.consumidores import ConsumidorComandosTracking
+            
+            print("THREAD CONSUMIDOR: Configurando dependencias...")
+            session = next(get_db_session())
+            repo_clicks = RepositorioClicksSQL(session)
+            repo_conversiones = RepositorioConversionesSQL(session)
+            despachador = DespachadorEventosPulsar()
+            
+            servicio_tracking = ServicioTracking(repo_clicks, repo_conversiones, despachador)
+            
+            print("THREAD CONSUMIDOR: Iniciando consumidor...")
+            consumidor = ConsumidorComandosTracking(servicio_tracking)
+            consumidor.iniciar_consumidor()
+            
+            print("THREAD CONSUMIDOR: COMPLETADO EXITOSAMENTE!")
+            
+        except Exception as e:
+            print(f"THREAD CONSUMIDOR ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    # Iniciar consumidor en thread
+    thread = threading.Thread(target=iniciar_consumidor, daemon=True)
+    thread.start()
+    print("LIFESPAN: Thread del consumidor iniciado")
+    
+    yield
+    
+    print("CERRANDO APLICACIÓN...")
+
 # Crear instancia de FastAPI
 app = FastAPI(
     title="Alpes Partners - Microservices with Apache Pulsar",
-    description="Sistema de microservicios usando Apache Pulsar para eventos",
-    version="2.0.0"
+    description="Sistema de microservicios usando Apache Pulsar para eventos", 
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # Registrar rutas
@@ -32,7 +81,6 @@ async def health_check():
         "pulsar_admin_url": os.getenv("PULSAR_ADMIN_URL", "http://pulsar:8080")
     }
     
-    # Verificar Pulsar
     try:
         from alpespartners.config.pulsar import get_pulsar_client
         client = get_pulsar_client()
@@ -52,19 +100,7 @@ async def root():
     return {
         "project": "Alpes Partners Microservices Migration",
         "architecture": "Event-Driven Microservices",
-        "event_broker": "Apache Pulsar",
-        "entrega": "Entrega 4 - POC Arquitectura",
-        "microservices": {
-            "tracking": "Gestión de clicks, conversiones y atribuciones",
-            "loyalty": "Gestión de embajadores y referidos",
-            "pagos": "Gestión de pagos y comisiones"
-        },
-        "endpoints": {
-            "health": "/health",
-            "tracking": "/v1/tracking/*",
-            "loyalty": "/v1/loyalty/*",
-            "pagos": "/v1/pagos/*"
-        }
+        "event_broker": "Apache Pulsar"
     }
 
 if __name__ == "__main__":

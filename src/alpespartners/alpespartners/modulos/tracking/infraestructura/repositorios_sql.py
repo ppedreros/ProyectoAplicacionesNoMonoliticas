@@ -76,6 +76,24 @@ class RepositorioClicksSQL(RepositorioClicks):
             db_click.comision_total = click.comision_total
             self.db.commit()
             self.db.refresh(db_click)
+    
+    def obtener_todos(self) -> List[Click]:
+        db_clicks = self.db.query(ClickModel).all()
+        return [
+            Click(
+                id=db_click.id,
+                id_partner=db_click.id_partner,
+                id_campana=db_click.id_campana,
+                url_origen=db_click.url_origen,
+                url_destino=db_click.url_destino,
+                timestamp=db_click.timestamp,
+                metadata_cliente=db_click.metadata_cliente,
+                total_conversiones=db_click.total_conversiones,
+                valor_total=db_click.valor_total,
+                comision_total=db_click.comision_total
+            )
+            for db_click in db_clicks
+        ]
 
 class RepositorioConversionesSQL(RepositorioConversiones):
     def __init__(self, db: Session):
@@ -167,3 +185,7 @@ class RepositorioConversionesSQL(RepositorioConversiones):
         )
         conversion.atribuciones = atribuciones
         return conversion
+    
+    def obtener_todos(self) -> List[Conversion]:
+        db_conversions = self.db.query(ConversionModel).all()
+        return [self._map_to_domain(db_conversion) for db_conversion in db_conversions]
