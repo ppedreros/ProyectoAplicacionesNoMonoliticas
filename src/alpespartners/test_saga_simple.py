@@ -23,9 +23,12 @@ def print_step(step, description):
     print(f"\n🔹 Paso {step}: {description}")
     print("-" * 40)
 
-def make_request(method, endpoint, data=None):
+def make_request(method, endpoint, data=None, base_url=None):
     """Realiza una petición HTTP usando urllib"""
-    url = f"{BASE_URL}{endpoint}"
+    if base_url:
+        url = f"{base_url}{endpoint}"
+    else:
+        url = f"{BASE_URL}{endpoint}"
     
     try:
         if method.upper() == "GET":
@@ -174,7 +177,7 @@ def main():
     
     # Verificar que el servidor esté corriendo
     print("\n🔍 Verificando conexión con el servidor...")
-    health = make_request("GET", "/health")
+    health = make_request("GET", "/health", base_url="http://localhost:8000")
     
     if not health:
         print("❌ No se puede conectar al servidor. Asegúrate de que esté corriendo en http://localhost:8000")

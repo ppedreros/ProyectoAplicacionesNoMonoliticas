@@ -144,8 +144,9 @@ class RepositorioSagaLogSQL(RepositorioSagaLog):
     
     def registrar_evento(self, id_saga: str, evento: str, datos: dict) -> None:
         """Registra un evento en el log de la saga"""
+        import uuid
         log_entry = SagaLogModel(
-            id=f"{id_saga}_{datetime.now().timestamp()}",
+            id=str(uuid.uuid4()),
             saga_id=id_saga,
             evento=evento,
             datos_evento=datos,
