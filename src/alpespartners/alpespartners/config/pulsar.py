@@ -9,7 +9,10 @@ TOPICS = {
     "PAGOS_EVENTOS": "persistent://public/default/pagos-eventos",
     "PAGOS_COMANDOS": "persistent://public/default/pagos-comandos",
     "AFILIADOS_EVENTOS": "persistent://public/default/afiliados-eventos",
-    "AFILIADOS_COMANDOS": "persistent://public/default/afiliados-comandos"
+    "AFILIADOS_COMANDOS": "persistent://public/default/afiliados-comandos",
+    "SAGA_EVENTOS": "persistent://public/default/saga-eventos",
+    "SAGA_COMANDOS": "persistent://public/default/saga-comandos",
+    "SAGA_LOG": "persistent://public/default/saga-log"
 }
 
 def get_pulsar_client():
