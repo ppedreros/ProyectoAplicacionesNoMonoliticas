@@ -6,6 +6,7 @@ from alpespartners.api.tracking import router as tracking_router
 from alpespartners.api.loyalty import router as loyalty_router
 from alpespartners.api.pagos import router as pagos_router
 from alpespartners.api.afiliados import router as afiliados_router
+from alpespartners.api.saga import router as saga_router
 
 # Crear instancia de FastAPI
 app = FastAPI(
@@ -19,14 +20,15 @@ app.include_router(tracking_router, prefix="/v1", tags=["tracking"])
 app.include_router(loyalty_router, prefix="/v1", tags=["loyalty"])
 app.include_router(pagos_router, prefix="/v1", tags=["pagos"])
 app.include_router(afiliados_router, prefix="/v1", tags=["afiliados"])
+app.include_router(saga_router, prefix="/v1", tags=["saga"])
 
 @app.get("/health")
 async def health_check():
     """Health check que incluye verificación de Pulsar"""
     health_status = {
         "status": "healthy", 
-        "services": ["tracking", "loyalty", "pagos", "afiliados"],
-        "message": "Alpes Partners microservices POC",
+        "services": ["tracking", "loyalty", "pagos", "afiliados", "saga"],
+        "message": "Alpes Partners microservices POC with Saga Pattern",
         "event_broker": "Apache Pulsar",
         "pulsar_service_url": os.getenv("PULSAR_SERVICE_URL", "pulsar://pulsar:6650"),
         "pulsar_admin_url": os.getenv("PULSAR_ADMIN_URL", "http://pulsar:8080")
@@ -57,13 +59,17 @@ async def root():
         "microservices": {
             "tracking": "Gestión de clicks, conversiones y atribuciones",
             "loyalty": "Gestión de embajadores y referidos",
-            "pagos": "Gestión de pagos y comisiones"
+            "pagos": "Gestión de pagos y comisiones",
+            "afiliados": "Gestión de afiliados y partners",
+            "saga": "Orquestación de transacciones distribuidas con patrón Saga"
         },
         "endpoints": {
             "health": "/health",
             "tracking": "/v1/tracking/*",
             "loyalty": "/v1/loyalty/*",
-            "pagos": "/v1/pagos/*"
+            "pagos": "/v1/pagos/*",
+            "afiliados": "/v1/afiliados/*",
+            "saga": "/v1/saga/*"
         }
     }
 

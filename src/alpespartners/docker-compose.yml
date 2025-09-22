@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://alpes:alpes@db:5432/alpes
+      - DATABASE_URL=postgresql://alpes:alpes@db:5432/alpespartners
       - PULSAR_SERVICE_URL=pulsar://pulsar:6650
       - PULSAR_ADMIN_URL=http://pulsar:8080
     depends_on:
@@ -36,7 +36,7 @@ services:
     environment:
       - POSTGRES_USER=alpes
       - POSTGRES_PASSWORD=alpes
-      - POSTGRES_DB=alpes
+      - POSTGRES_DB=alpespartners
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -97,6 +97,11 @@ services:
         echo 'Creando tópicos para Afiliados Service...'
         bin/pulsar-admin topics create persistent://public/default/afiliados-eventos
         bin/pulsar-admin topics create persistent://public/default/afiliados-comandos
+        
+        echo 'Creando tópicos para Saga Service...'
+        bin/pulsar-admin topics create persistent://public/default/saga-eventos
+        bin/pulsar-admin topics create persistent://public/default/saga-comandos
+        bin/pulsar-admin topics create persistent://public/default/saga-log
         
         echo 'Listando tópicos creados:'
         bin/pulsar-admin topics list public/default
