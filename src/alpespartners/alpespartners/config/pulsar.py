@@ -10,11 +10,10 @@ TOPICS = {
     "PAGOS_COMANDOS": "persistent://public/default/pagos-comandos",
     "AFILIADOS_EVENTOS": "persistent://public/default/afiliados-eventos",
     "AFILIADOS_COMANDOS": "persistent://public/default/afiliados-comandos",
-    "COMANDO_REGISTRAR_CLICK": "persistent://public/default/comando-registrar-click",
-    "COMANDO_REGISTRAR_CONVERSION": "persistent://public/default/comando-registrar-conversion", 
-    "COMANDO_CREAR_AFILIADO": "persistent://public/default/comando-crear-afiliado",
-    "COMANDO_CREAR_PAGO": "persistent://public/default/comando-crear-pago"
-}
+
+    "SAGA_EVENTOS": "persistent://public/default/saga-eventos",
+    "SAGA_COMANDOS": "persistent://public/default/saga-comandos",
+    "SAGA_LOG": "persistent://public/default/saga-log"
 
 def get_pulsar_client():
     """Crea un cliente de Pulsar con configuración de error handling"""
