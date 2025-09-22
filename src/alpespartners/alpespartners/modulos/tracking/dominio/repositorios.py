@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 from .entidades import Click, Conversion
@@ -19,6 +19,10 @@ class RepositorioClicks(ABC):
         
     @abstractmethod
     def actualizar(self, click: Click):
+        ...
+    
+    @abstractmethod
+    def obtener_todos(self) -> List[Click]:
         ...
 
 class RepositorioConversiones(ABC):
@@ -40,5 +44,9 @@ class RepositorioConversiones(ABC):
 
     @abstractmethod
     def actualizar(self, conversion: Conversion):
+        ...
+
+    @abstractmethod
+    def obtener_todos(self) -> List[Conversion]:
         ...
 

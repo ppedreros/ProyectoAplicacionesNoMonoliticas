@@ -3,7 +3,7 @@ import logging
 import pulsar
 from typing import Dict, Any
 
-from ...config.pulsar import get_pulsar_client, TOPICS
+from ....config.pulsar import get_pulsar_client, TOPICS
 from .consumidores import ConsumidorReferidosRegistrados, ConsumidorComandosPago
 from ..aplicacion.servicios import ServicioPagos
 

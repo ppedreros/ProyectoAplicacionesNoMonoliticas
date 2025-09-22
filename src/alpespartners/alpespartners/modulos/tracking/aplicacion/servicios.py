@@ -125,4 +125,42 @@ class ServicioTracking:
                                    desde: Optional[datetime] = None, 
                                    hasta: Optional[datetime] = None) -> List[Conversion]:
         return self.repositorio_conversiones.obtener_por_partner(id_partner, desde, hasta)
+    
+    def obtener_clicks_filtrados(self, 
+                           partner_id: Optional[str] = None,
+                           campana_id: Optional[str] = None,
+                           fecha_inicio: Optional[str] = None,
+                           fecha_fin: Optional[str] = None,
+                           limite: int = 100) -> List[Click]:
+        """Obtiene clicks filtrados para el BFF"""
+        try:
+            return self.repositorio_clicks.obtener_con_filtros(
+                partner_id=partner_id,
+                campana_id=campana_id,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                limite=limite
+            )
+        except Exception as e:
+            raise ValueError(f"Error obteniendo clicks: {str(e)}")
+
+    def obtener_conversiones_filtradas(self,
+                                    partner_id: Optional[str] = None,
+                                    campana_id: Optional[str] = None,
+                                    tipo_conversion: Optional[str] = None,
+                                    fecha_inicio: Optional[str] = None,
+                                    fecha_fin: Optional[str] = None,
+                                    limite: int = 100) -> List[Conversion]:
+        """Obtiene conversiones filtradas para el BFF"""
+        try:
+            return self.repositorio_conversiones.obtener_con_filtros(
+                partner_id=partner_id,
+                campana_id=campana_id,
+                tipo_conversion=tipo_conversion,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                limite=limite
+            )
+        except Exception as e:
+            raise ValueError(f"Error obteniendo conversiones: {str(e)}")
 

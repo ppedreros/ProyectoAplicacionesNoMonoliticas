@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import Optional, Dict, Any
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -123,3 +123,73 @@ async def obtener_conversiones_partner(
         return conversiones_json
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/tracking/clicks")
+async def obtener_clicks_endpoint(
+    partner_id: Optional[str] = Query(None, description="ID del partner"),
+    limite: int = Query(100, description="Límite de resultados"),
+    servicio_tracking: ServicioTracking = Depends(get_tracking_service)
+) -> List[Dict[str, Any]]:
+    """Obtiene lista de clicks para el BFF"""
+    try:
+        # Usar servicio para obtener clicks con filtros
+        clicks = servicio_tracking.repositorio_clicks.obtener_todos()
+        
+        # Filtrar por partner si se especifica
+        if partner_id:
+            clicks = [c for c in clicks if c.id_partner == partner_id]
+                
+        # Convertir a formato JSON
+        clicks_json = []
+        for click in clicks:
+            clicks_json.append({
+                "id": str(click.id),
+                "id_partner": click.id_partner,
+                "id_campana": click.id_campana,
+                "url_origen": click.url_origen,
+                "url_destino": click.url_destino,
+                "timestamp": click.timestamp.isoformat()
+            })
+        
+        return clicks_json
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo clicks: {str(e)}")
+    
+@router.get("/tracking/conversiones")
+async def obtener_conversiones_endpoint(
+    partner_id: Optional[str] = Query(None, description="ID del partner"),
+    campana_id: Optional[str] = Query(None, description="ID de la campaña"),
+    tipo_conversion: Optional[str] = Query(None, description="Tipo de conversión"),
+    fecha_inicio: Optional[str] = Query(None, description="Fecha inicio"),
+    fecha_fin: Optional[str] = Query(None, description="Fecha fin"),
+    limite: int = Query(100, description="Límite de resultados"),
+    servicio_tracking: ServicioTracking = Depends(get_tracking_service)
+) -> List[Dict[str, Any]]:
+    """Obtiene lista de conversiones para el BFF"""
+    try:
+        conversiones = servicio_tracking.obtener_conversiones_filtradas(
+            partner_id=partner_id,
+            campana_id=campana_id,
+            tipo_conversion=tipo_conversion,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            limite=limite
+        )
+        
+        conversiones_json = []
+        for conversion in conversiones:
+            conversiones_json.append({
+                "id": conversion.id,
+                "id_partner": conversion.id_partner,
+                "id_campana": conversion.id_campana,
+                "tipo_conversion": conversion.tipo_conversion.value,
+                "valor": float(conversion.informacion_monetaria.valor),
+                "moneda": conversion.informacion_monetaria.moneda,
+                "timestamp": conversion.timestamp.isoformat()
+            })
+        
+        return conversiones_json
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
