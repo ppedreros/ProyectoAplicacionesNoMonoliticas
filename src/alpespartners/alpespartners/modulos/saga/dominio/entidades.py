@@ -4,16 +4,16 @@ from datetime import datetime
 import uuid
 
 from .objetos_valor import EstadoSaga, TipoSaga, EstadoPaso, DatosPaso, PasoCompensacion
-from ...seedwork.dominio.entidades import Entidad
+from alpespartners.seedwork.dominio.entidades import Entidad
 
 @dataclass
 class Paso(Entidad):
     """Representa un paso individual en la saga"""
-    orden: int
-    servicio: str
-    accion: str
-    estado: EstadoPaso
-    datos_entrada: Dict[str, Any]
+    orden: int = 0
+    servicio: str = ""
+    accion: str = ""
+    estado: EstadoPaso = EstadoPaso.PENDIENTE
+    datos_entrada: Dict[str, Any] = field(default_factory=dict)
     datos_salida: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     timestamp_inicio: Optional[datetime] = None
@@ -49,8 +49,8 @@ class Paso(Entidad):
 @dataclass
 class Saga(Entidad):
     """Entidad principal que representa una saga"""
-    tipo: TipoSaga
-    estado: EstadoSaga
+    tipo: TipoSaga = TipoSaga.PROCESAMIENTO_CONVERSION
+    estado: EstadoSaga = EstadoSaga.INICIADA
     pasos: List[Paso] = field(default_factory=list)
     datos_contexto: Dict[str, Any] = field(default_factory=dict)
     timestamp_inicio: datetime = field(default_factory=datetime.now)
@@ -58,14 +58,10 @@ class Saga(Entidad):
     error_global: Optional[str] = None
     compensaciones_ejecutadas: List[PasoCompensacion] = field(default_factory=list)
 
-    def __post_init__(self):
-        if not self.id:
-            self.id = str(uuid.uuid4())
 
     def agregar_paso(self, orden: int, servicio: str, accion: str, datos_entrada: Dict[str, Any]):
         """Agrega un nuevo paso a la saga"""
         paso = Paso(
-            id=str(uuid.uuid4()),
             orden=orden,
             servicio=servicio,
             accion=accion,
